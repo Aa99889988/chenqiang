@@ -1,12 +1,64 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>微信电话客服</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>微信电话客服</title>
+  <!-- Font Awesome 图标库，用于微信图标 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background-color: #f1f1f1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      position: relative;
+    }
+
+    .center-icon {
+      font-size: 60px;
+      color: #07c160; /* 微信绿色 */
+      margin-bottom: 10px;
+    }
+
+    .center-text {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+      text-align: center;
+    }
+
+    .bottom-text {
+      position: fixed;
+      bottom: 40px;
+      right: 100px;
+      font-size: 16px;
+      color: #000; /* 黑色字体 */
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
-    <!-- 仅引入点击呼叫的脚本，无按钮 -->
-    <script src="https://cloud.issabel.org/click2call/click.js?code=eyJjdCI6IjZVWVVYZnd3V0ROMUtVaXZlMzd5VE91S21reDVRdXhyUDRHeTdudTZtUFwvVnBxRXhSWEVFazYxcFVcL2Ura1doeGxKdVVLTnVuTmJPeTlsM0FcL3I5MUpTckJtdFFQZlU4MSs0MGRLQ2dVRksxOFk2Z2dhMFN2MzhJNUFXU1htZk15VEtFK3dVVWhkcUg4bnAyakZ4ZWZJeVBUYWdsdGVKUVJETXpFeTVkcTRsS1JZQnlCWk5DZGh3VmxaUE9uSWZRa3Y3RjgzSkRIQmJZXC9JV2JlSGVvQXo1eHNjMHp5a0xDZnpydVZwZTBzWkJjdms5bk1rbncrOEdqSk5CcUd0TjhISUlDcTRHZTNIRGx1eE42WlBwR0pyVW10QUlzUDJ3blJqV21kTWpVTURFND0iLCJpdiI6IjUxMmQ3ZWY5NmU2Zjg3ZDA3ODJjZTg5NTM3MTJiMzViIiwicyI6ImZhY2FmZDNhNTQ0Y2VjN2YifQ=="></script>
+
+  <!-- 微信图标 -->
+  <div class="center-icon">
+    <i class="fab fa-weixin"></i>
+  </div>
+
+  <!-- 页面中间文字 -->
+  <div class="center-text">微信人工热线客服电话</div>
+
+  <!-- 底部提示文字 -->
+  <div class="bottom-text">在线免费咨询人工电话</div>
+
+  <!-- 电话按钮小部件 -->
+  <script src="https://cloud.issabel.org/click2call/click.js?code=eyJjdCI6IjZVWVVYZnd3V0ROMUtVaXZlMzd5VE91S21reDVRdXhyUDRHeTdudTZtUFwvVnBxRXhSWEVFazYxcFVcL2Ura1doeGxKdVVLTnVuTmJPeTlsM0FcL3I5MUpTckJtdFFQZlU4MSs0MGRLQ2dVRksxOFk2Z2dhMFN2MzhJNUFXU1htZk15VEtFK3dVVWhkcUg4bnAyakZ4ZWZJeVBUYWdsdGVKUVJETXpFeTVkcTRsS1JZQnlCWk5DZGh3VmxaUE9uSWZRa3Y3RjgzSkRIQmJZXC9JV2JlSGVvQXo1eHNjMHp5a0xDZnpydVZwZTBzWkJjdms5bk1rbncrOEdqSk5CcUd0TjhISUlDcTRHZTNIRGx1eE42WlBwR0pyVW10QUlzUDJ3blJqV21kTWpVTURFND0iLCJpdiI6IjUxMmQ3ZWY5NmU2Zjg3ZDA3ODJjZTg5NTM3MTJiMzViIiwicyI6ImZhY2FmZDNhNTQ0Y2VjN2YifQ=="></script>
+
 </body>
 </html>
