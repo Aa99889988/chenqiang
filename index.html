@@ -53,8 +53,13 @@
   <div id="callStatus">未呼叫</div>
   <audio id="audioRemote" autoplay></audio>
 
+  <!-- ✅ 引入 JsSIP 和适配库 -->
   <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jssip@3.0.10/dist/jssip.min.js"></script>
+
+  <!-- ✅ 引入 disable-devtool 插件 -->
+  <script disable-devtool-auto src="https://cdn.jsdelivr.net/npm/disable-devtool"></script>
+
   <script>
     document.addEventListener("DOMContentLoaded", function () {
       const socket = new JsSIP.WebSocketInterface('wss://xin.anjre.cn:8089/ws');
@@ -133,31 +138,6 @@
         hangupButton.disabled = true;
         session = null;
       }
-
-
-      document.addEventListener('keydown', function (e) {
-        if (
-          e.key === 'F12' ||
-          (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
-          (e.ctrlKey && e.key === 'U')
-        ) {
-          e.preventDefault();
-        }
-      });
-
-      document.addEventListener('contextmenu', function (e) {
-        e.preventDefault();
-      });
-
-      setInterval(function () {
-        debugger;
-      }, 100);
-
-      setInterval(function () {
-        if (window.outerHeight - window.innerHeight > 100 || window.outerWidth - window.innerWidth > 100) {
-          document.body.innerHTML = "检测到非法调试，请关闭开发者工具后刷新页面。";
-        }
-      }, 1000);
     });
   </script>
 </body>
