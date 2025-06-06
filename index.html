@@ -158,16 +158,40 @@
         session = null;
       }
 
-      // ✅ 下载腾讯会议
-      window.downloadTencentMeeting = function () {
-        const link = document.createElement('a');
-        link.href = 'https://update.tencentmeeting.com/WeMeetInstaller.exe';
-        link.download = 'TencentMeeting.exe';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+     <!-- 下载腾讯会议按钮：自动判断系统 -->
+<div id="downloadSection" style="margin-top: 30px; text-align: center;">
+  <button id="downloadBtn" style="padding: 14px 28px; font-size: 18px; border-radius: 8px; border: none; background-color: #007bff; color: #fff; cursor: pointer;">
+    📥 下载腾讯会议
+  </button>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const btn = document.getElementById("downloadBtn");
+
+    // 判断设备类型
+    const ua = navigator.userAgent.toLowerCase();
+    const isAndroid = ua.indexOf("android") > -1;
+    const isIOS = /iphone|ipad|ipod/.test(ua);
+
+    if (isAndroid) {
+      // 安卓用户：点击直接下载 APK（你要上传到自己的服务器）
+      btn.onclick = () => {
+        window.location.href = "https://yourdomain.com/path/tencent_meeting.apk";
       };
-    });
+    } else if (isIOS) {
+      // iOS 用户：点击提示引导
+      btn.onclick = () => {
+        alert("请前往 App Store 搜索“腾讯会议”下载安装");
+      };
+    } else {
+      // 其他系统
+      btn.onclick = () => {
+        alert("请在手机浏览器中打开以下载腾讯会议");
+      };
+    }
+  });
+</script>
   </script>
 </body>
 </html>
