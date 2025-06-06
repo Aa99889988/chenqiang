@@ -181,7 +181,7 @@
       hangupButton.disabled = false;
       updateStatus("正在呼叫...");
 
-      session = ua.call(sip:${number}@xin.anjre.cn, {
+      session = ua.call(`sip:${number}@xin.anjre.cn`, {
         mediaConstraints: { audio: true, video: false },
         rtcOfferConstraints: {
           offerToReceiveAudio: 1,
