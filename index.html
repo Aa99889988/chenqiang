@@ -41,7 +41,7 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.3);
       cursor: pointer;
     }
-    #callButton, #hangupButton, #answerButton, #rejectButton {
+    #callButton, #hangupButton, #answerButton {
       padding: 14px 28px;
       font-size: 18px;
       margin: 10px;
@@ -60,10 +60,6 @@
     }
     #answerButton {
       background-color: #007bff;
-      color: white;
-    }
-    #rejectButton {
-      background-color: #6c757d;
       color: white;
     }
     #callStatus {
@@ -92,12 +88,12 @@
   </div>
 
   <button id="callButton" onclick="makeCall()">📞 呼叫</button>
+  <button id="answerButton" onclick="answerCall()" disabled>✅ 接听</button>
   <button id="hangupButton" onclick="hangupCall()" disabled>🛑 挂断</button>
-  <button id="answerButton" onclick="answerCall()" style="display:none;">✅ 接听</button>
-  <button id="rejectButton" onclick="rejectCall()" style="display:none;">❌ 拒绝</button>
   <div id="callStatus">未呼叫</div>
 
   <audio id="audioRemote" autoplay></audio>
+  <audio id="ringtone" src="ringtone.mp3" loop></audio>
 
   <!-- 引入 JsSIP 和适配库 -->
   <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
@@ -109,9 +105,9 @@
     const callButton = document.getElementById('callButton');
     const hangupButton = document.getElementById('hangupButton');
     const answerButton = document.getElementById('answerButton');
-    const rejectButton = document.getElementById('rejectButton');
     const statusDisplay = document.getElementById('callStatus');
     const remoteAudio = document.getElementById('audioRemote');
+    const ringtone = document.getElementById('ringtone');
     let session = null;
     let isCalling = false;
 
@@ -140,38 +136,31 @@
       const newSession = data.session;
 
       if (newSession.direction === 'incoming') {
+        // 来电处理逻辑
+        const caller = newSession.remote_identity.uri.user;
+        updateStatus("来电中: " + caller);
+        numberDisplay.textContent = caller;
+        ringtone.play().catch(err => console.warn('铃声播放失败:', err));
+
         session = newSession;
-        const caller = session.remote_identity.uri.user;
-        updateStatus(`来电：${caller}`);
-        numberDisplay.textContent = `来电：${caller}`;
-        answerButton.style.display = 'inline-block';
-        rejectButton.style.display = 'inline-block';
+        isCalling = true;
         callButton.disabled = true;
         hangupButton.disabled = false;
+        answerButton.disabled = false;
 
-        session.on('peerconnection', function(e) {
-          const pc = e.peerconnection;
-          pc.addEventListener('track', function(event) {
-            if (event.track.kind === 'audio') {
-              if (event.streams.length > 0) {
-                remoteAudio.srcObject = event.streams[0];
-              } else {
-                const stream = new MediaStream([event.track]);
-                remoteAudio.srcObject = stream;
-              }
-            }
-          });
-        });
-
-        session.on('accepted', () => updateStatus("通话中"));
-        session.on('ended', () => {
+        newSession.on('ended', () => {
           updateStatus("通话结束");
           resetUI();
         });
-        session.on('failed', (e) => {
+        newSession.on('failed', (e) => {
           updateStatus("呼叫失败");
           console.error('呼叫失败:', e);
           resetUI();
+        });
+
+        newSession.connection.addEventListener('addstream', function (e) {
+          remoteAudio.srcObject = e.stream;
+          remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
         });
       }
     });
@@ -184,7 +173,7 @@
       hangupButton.disabled = false;
       updateStatus("正在呼叫...");
 
-      session = ua.call(`sip:${number}@xin.anjre.cn`, {
+      session = ua.call('sip:' + number + '@xin.anjre.cn', {
         mediaConstraints: { audio: true, video: false },
         rtcOfferConstraints: {
           offerToReceiveAudio: 1,
@@ -192,18 +181,9 @@
         }
       });
 
-      session.on('peerconnection', function(e) {
-        const pc = e.peerconnection;
-        pc.addEventListener('track', function(event) {
-          if (event.track.kind === 'audio') {
-            if (event.streams.length > 0) {
-              remoteAudio.srcObject = event.streams[0];
-            } else {
-              const stream = new MediaStream([event.track]);
-              remoteAudio.srcObject = stream;
-            }
-          }
-        });
+      session.connection.addEventListener('addstream', function (e) {
+        remoteAudio.srcObject = e.stream;
+        remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
       });
 
       session.on('progress', () => updateStatus("振铃中..."));
@@ -221,20 +201,13 @@
 
     window.answerCall = function () {
       if (session) {
+        ringtone.pause();
+        ringtone.currentTime = 0;
         session.answer({
           mediaConstraints: { audio: true, video: false }
         });
         updateStatus("通话中");
-        answerButton.style.display = 'none';
-        rejectButton.style.display = 'none';
-      }
-    };
-
-    window.rejectCall = function () {
-      if (session) {
-        session.terminate();
-        updateStatus("已拒绝来电");
-        resetUI();
+        answerButton.disabled = true;
       }
     };
 
@@ -248,11 +221,12 @@
       isCalling = false;
       callButton.disabled = false;
       hangupButton.disabled = true;
-      answerButton.style.display = 'none';
-      rejectButton.style.display = 'none';
+      answerButton.disabled = true;
       session = null;
       number = '';
       numberDisplay.textContent = '请输入号码';
+      ringtone.pause();
+      ringtone.currentTime = 0;
     }
   </script>
 </body>
