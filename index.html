@@ -151,23 +151,29 @@
       const newSession = data.session;
 
       if (newSession.direction === 'incoming') {
+        const callerURI = newSession.remote_identity.uri.toString();
+        const callerDisplayName = newSession.remote_identity.display_name || callerURI;
+        updateStatus(`来电中：${callerDisplayName}`);
+
         session = newSession;
-        updateStatus("来电中...");
+        isCalling = true;
+        callButton.disabled = true;
+        hangupButton.disabled = true;
         answerButton.style.display = 'inline-block';
         rejectButton.style.display = 'inline-block';
 
-        session.on('accepted', () => updateStatus("通话中"));
-        session.on('ended', () => {
+        newSession.on('accepted', () => updateStatus("通话中"));
+        newSession.on('ended', () => {
           updateStatus("通话结束");
           resetUI();
         });
-        session.on('failed', (e) => {
+        newSession.on('failed', (e) => {
           updateStatus("呼叫失败");
           console.error('呼叫失败:', e);
           resetUI();
         });
 
-        session.connection.addEventListener('addstream', function (e) {
+        newSession.connection.addEventListener('addstream', function (e) {
           remoteAudio.srcObject = e.stream;
           remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
         });
