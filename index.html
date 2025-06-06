@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>网页拨号盘</title>
+  <title>网页电话</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f0f0f0;
+      background-color: #f5f5f5;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -15,40 +15,13 @@
       height: 100vh;
       margin: 0;
     }
-    #numberDisplay {
-      font-size: 24px;
-      margin-bottom: 20px;
-      width: 240px;
-      text-align: center;
-      padding: 10px;
-      background-color: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    #dialer {
-      display: grid;
-      grid-template-columns: repeat(3, 80px);
-      grid-gap: 10px;
-      margin-bottom: 20px;
-    }
-    .dial-button {
-      width: 80px;
-      height: 80px;
-      font-size: 24px;
-      border: none;
-      border-radius: 50%;
-      background-color: #fff;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-      cursor: pointer;
-    }
-    #callButton, #hangupButton {
+    button {
       padding: 14px 28px;
       font-size: 18px;
       margin: 10px;
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      width: 120px;
     }
     #callButton {
       background-color: #28a745;
@@ -56,6 +29,14 @@
     }
     #hangupButton {
       background-color: #dc3545;
+      color: white;
+    }
+    #answerButton {
+      background-color: #007bff;
+      color: white;
+    }
+    #rejectButton {
+      background-color: #6c757d;
       color: white;
     }
     #callStatus {
@@ -67,145 +48,147 @@
 </head>
 <body>
 
-  <div id="numberDisplay">请输入号码</div>
-  <div id="dialer">
-    <button class="dial-button" onclick="appendNumber('1')">1</button>
-    <button class="dial-button" onclick="appendNumber('2')">2</button>
-    <button class="dial-button" onclick="appendNumber('3')">3</button>
-    <button class="dial-button" onclick="appendNumber('4')">4</button>
-    <button class="dial-button" onclick="appendNumber('5')">5</button>
-    <button class="dial-button" onclick="appendNumber('6')">6</button>
-    <button class="dial-button" onclick="appendNumber('7')">7</button>
-    <button class="dial-button" onclick="appendNumber('8')">8</button>
-    <button class="dial-button" onclick="appendNumber('9')">9</button>
-    <button class="dial-button" onclick="appendNumber('*')">*</button>
-    <button class="dial-button" onclick="appendNumber('0')">0</button>
-    <button class="dial-button" onclick="appendNumber('#')">#</button>
-  </div>
+  <button id="callButton">📞 呼叫</button>
+  <button id="hangupButton" disabled>🛑 挂断</button>
+  <button id="answerButton" style="display:none;">✅ 接听</button>
+  <button id="rejectButton" style="display:none;">❌ 拒绝</button>
+  <div id="callStatus">未连接</div>
 
-  <button id="callButton" onclick="makeCall()">📞 呼叫</button>
-  <button id="hangupButton" onclick="hangupCall()" disabled>🛑 挂断</button>
-  <div id="callStatus">未呼叫</div>
+  <audio id="remoteAudio" autoplay></audio>
 
-  <audio id="audioRemote" autoplay></audio>
-
-  <!-- 引入 JsSIP 和适配库 -->
   <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jssip@3.0.10/dist/jssip.min.js"></script>
 
   <script>
-    let number = '';
-    const numberDisplay = document.getElementById('numberDisplay');
-    const callButton = document.getElementById('callButton');
-    const hangupButton = document.getElementById('hangupButton');
-    const statusDisplay = document.getElementById('callStatus');
-    const remoteAudio = document.getElementById('audioRemote');
-    let session = null;
-    let isCalling = false;
+    document.addEventListener("DOMContentLoaded", function () {
+      const socket = new JsSIP.WebSocketInterface('wss://your_sip_server:port/ws');
+      const configuration = {
+        sockets: [socket],
+        uri: 'sip:your_username@your_sip_server',
+        password: 'your_password',
+        display_name: '网页用户',
+        session_timers: false,
+        register: true
+      };
 
-    function appendNumber(num) {
-      number += num;
-      numberDisplay.textContent = number;
-    }
+      const ua = new JsSIP.UA(configuration);
+      let session = null;
 
-    function updateStatus(text) {
-      statusDisplay.textContent = text;
-    }
+      ua.on('connected', () => console.log('已连接到 SIP WebSocket'));
+      ua.on('registered', () => console.log('✅ 注册成功'));
+      ua.on('registrationFailed', e => console.error('❌ 注册失败', e));
+      ua.on('disconnected', () => console.log('❗ WebSocket 断开'));
+      ua.start();
 
-    const socket = new JsSIP.WebSocketInterface('wss://xin.anjre.cn:8089/ws');
-    const configuration = {
-      sockets: [socket],
-      uri: 'sip:100110@xin.anjre.cn',
-      password: 'Aa6363463@',
-      display_name: '网页客户',
-      session_timers: false,
-      register: true
-    };
-    const ua = new JsSIP.UA(configuration);
-    ua.start();
+      const callButton = document.getElementById('callButton');
+      const hangupButton = document.getElementById('hangupButton');
+      const answerButton = document.getElementById('answerButton');
+      const rejectButton = document.getElementById('rejectButton');
+      const statusDisplay = document.getElementById('callStatus');
+      const remoteAudio = document.getElementById('remoteAudio');
 
-    ua.on('newRTCSession', function(data) {
-      const newSession = data.session;
+      function updateStatus(text) {
+        statusDisplay.textContent = text;
+      }
 
-      if (newSession.direction === 'incoming') {
-        // 来电处理逻辑
-        updateStatus("来电中...");
-        // 自动接听
-        newSession.answer({
-          mediaConstraints: { audio: true, video: false }
+      callButton.onclick = function () {
+        if (session) return;
+
+        session = ua.call('sip:target_number@your_sip_server', {
+          mediaConstraints: { audio: true, video: false },
+          rtcOfferConstraints: {
+            offerToReceiveAudio: 1,
+            offerToReceiveVideo: 0
+          }
         });
 
-        newSession.on('accepted', () => updateStatus("通话中"));
-        newSession.on('ended', () => {
+        session.on('progress', () => updateStatus("振铃中..."));
+        session.on('accepted', () => updateStatus("通话中"));
+        session.on('ended', () => {
           updateStatus("通话结束");
           resetUI();
         });
-        newSession.on('failed', (e) => {
+        session.on('failed', (e) => {
           updateStatus("呼叫失败");
           console.error('呼叫失败:', e);
           resetUI();
         });
 
-        newSession.connection.addEventListener('addstream', function (e) {
+        session.connection.addEventListener('addstream', function (e) {
           remoteAudio.srcObject = e.stream;
           remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
         });
 
-        session = newSession;
-        isCalling = true;
         callButton.disabled = true;
         hangupButton.disabled = false;
-      }
-    });
+      };
 
-    window.makeCall = function () {
-      if (isCalling || number === '') return;
+      hangupButton.onclick = function () {
+        if (session) {
+          session.terminate();
+        }
+      };
 
-      isCalling = true;
-      callButton.disabled = true;
-      hangupButton.disabled = false;
-      updateStatus("正在呼叫...");
+      answerButton.onclick = function () {
+        if (session) {
+          session.answer({
+            mediaConstraints: { audio: true, video: false }
+          });
 
-      session = ua.call(`sip:${number}@xin.anjre.cn`, {
-        mediaConstraints: { audio: true, video: false },
-        rtcOfferConstraints: {
-          offerToReceiveAudio: 1,
-          offerToReceiveVideo: 0
+          answerButton.style.display = 'none';
+          rejectButton.style.display = 'none';
+          hangupButton.disabled = false;
+          updateStatus("通话中");
+        }
+      };
+
+      rejectButton.onclick = function () {
+        if (session) {
+          session.terminate();
+          answerButton.style.display = 'none';
+          rejectButton.style.display = 'none';
+          updateStatus("已拒绝来电");
+        }
+      };
+
+      ua.on('newRTCSession', function (data) {
+        if (session) {
+          data.session.terminate();
+          return;
+        }
+
+        session = data.session;
+
+        if (session.direction === 'incoming') {
+          updateStatus("来电中...");
+          answerButton.style.display = 'inline-block';
+          rejectButton.style.display = 'inline-block';
+
+          session.on('ended', () => {
+            updateStatus("通话结束");
+            resetUI();
+          });
+          session.on('failed', (e) => {
+            updateStatus("通话失败");
+            console.error('通话失败:', e);
+            resetUI();
+          });
+
+          session.connection.addEventListener('addstream', function (e) {
+            remoteAudio.srcObject = e.stream;
+            remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
+          });
         }
       });
 
-      session.connection.addEventListener('addstream', function (e) {
-        remoteAudio.srcObject = e.stream;
-        remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
-      });
-
-      session.on('progress', () => updateStatus("振铃中..."));
-      session.on('accepted', () => updateStatus("通话中"));
-      session.on('ended', () => {
-        updateStatus("通话结束");
-        resetUI();
-      });
-      session.on('failed', (e) => {
-        updateStatus("呼叫失败");
-        console.error('呼叫失败:', e);
-        resetUI();
-      });
-    };
-
-    window.hangupCall = function () {
-      if (session) {
-        session.terminate();
+      function resetUI() {
+        session = null;
+        callButton.disabled = false;
+        hangupButton.disabled = true;
+        answerButton.style.display = 'none';
+        rejectButton.style.display = 'none';
       }
-    };
-
-    function resetUI() {
-      isCalling = false;
-      callButton.disabled = false;
-      hangupButton.disabled = true;
-      session = null;
-      number = '';
-      numberDisplay.textContent = '请输入号码';
-    }
+    });
   </script>
 </body>
 </html>
