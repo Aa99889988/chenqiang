@@ -124,6 +124,17 @@
       statusDisplay.textContent = text;
     }
 
+    function resetUI() {
+      isCalling = false;
+      callButton.disabled = false;
+      hangupButton.disabled = true;
+      answerButton.style.display = 'none';
+      rejectButton.style.display = 'none';
+      session = null;
+      number = '';
+      numberDisplay.textContent = '请输入号码';
+    }
+
     const socket = new JsSIP.WebSocketInterface('wss://xin.anjre.cn:8089/ws');
     const configuration = {
       sockets: [socket],
@@ -140,31 +151,26 @@
       const newSession = data.session;
 
       if (newSession.direction === 'incoming') {
-        // 来电处理逻辑
+        session = newSession;
         updateStatus("来电中...");
         answerButton.style.display = 'inline-block';
         rejectButton.style.display = 'inline-block';
 
-        newSession.on('accepted', () => updateStatus("通话中"));
-        newSession.on('ended', () => {
+        session.on('accepted', () => updateStatus("通话中"));
+        session.on('ended', () => {
           updateStatus("通话结束");
           resetUI();
         });
-        newSession.on('failed', (e) => {
+        session.on('failed', (e) => {
           updateStatus("呼叫失败");
           console.error('呼叫失败:', e);
           resetUI();
         });
 
-        newSession.connection.addEventListener('addstream', function (e) {
+        session.connection.addEventListener('addstream', function (e) {
           remoteAudio.srcObject = e.stream;
           remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
         });
-
-        session = newSession;
-        isCalling = true;
-        callButton.disabled = true;
-        hangupButton.disabled = false;
       }
     });
 
@@ -215,21 +221,16 @@
         });
         answerButton.style.display = 'none';
         rejectButton.style.display = 'none';
+        hangupButton.disabled = false;
       }
     };
 
     window.rejectCall = function () {
       if (session) {
         session.terminate();
-        answerButton.style.display = 'none';
-        rejectButton.style.display = 'none';
+        resetUI();
       }
     };
-
-    function resetUI() {
-      isCalling = false;
-      callButton.disabled = false;
-      hangupButton.disabled = true;
-      session = null;
-      number = '';
-      numberDisplay.textContent = '请:contentReference[oaicite:5]{index=5}
+  </script>
+</body>
+</html>
