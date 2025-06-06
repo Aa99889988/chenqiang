@@ -15,6 +15,15 @@
       height: 100vh;
       margin: 0;
     }
+    #loginForm {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background-color: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
     #numberDisplay {
       font-size: 24px;
       margin-bottom: 20px;
@@ -41,7 +50,7 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.3);
       cursor: pointer;
     }
-    #callButton, #hangupButton, #answerButton, #rejectButton {
+    #callButton, #hangupButton {
       padding: 14px 28px;
       font-size: 18px;
       margin: 10px;
@@ -58,6 +67,41 @@
       background-color: #dc3545;
       color: white;
     }
+    #callStatus {
+      font-size: 18px;
+      margin-top: 10px;
+      color: #333;
+    }
+    #incomingCallModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    #incomingCallContent {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    #incomingCallContent p {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+    #answerButton, #rejectButton {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 5px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
     #answerButton {
       background-color: #007bff;
       color: white;
@@ -66,14 +110,16 @@
       background-color: #6c757d;
       color: white;
     }
-    #callStatus {
-      font-size: 18px;
-      margin-top: 10px;
-      color: #333;
-    }
   </style>
 </head>
 <body>
+
+  <div id="loginForm">
+    <label>SIP URI: <input type="text" id="sipUri" placeholder="sip:100110@xin.anjre.cn"></label><br><br>
+    <label>密码: <input type="password" id="sipPassword" placeholder="Aa6363463@"></label><br><br>
+    <label>WebSocket: <input type="text" id="wsServer" placeholder="wss://xin.anjre.cn:8089/ws"></label><br><br>
+    <button onclick="login()">登录</button>
+  </div>
 
   <div id="numberDisplay">请输入号码</div>
   <div id="dialer">
@@ -93,9 +139,15 @@
 
   <button id="callButton" onclick="makeCall()">📞 呼叫</button>
   <button id="hangupButton" onclick="hangupCall()" disabled>🛑 挂断</button>
-  <button id="answerButton" onclick="answerCall()" style="display:none;">✅ 接听</button>
-  <button id="rejectButton" onclick="rejectCall()" style="display:none;">❌ 拒接</button>
   <div id="callStatus">未呼叫</div>
+
+  <div id="incomingCallModal">
+    <div id="incomingCallContent">
+      <p id="incomingCallText">来电中: </p>
+      <button id="answerButton" onclick="answerCall()">✅ 接听</button>
+      <button id="rejectButton" onclick="rejectCall()">❌ 拒接</button>
+    </div>
+  </div>
 
   <audio id="audioRemote" autoplay></audio>
   <audio id="ringtone" src="ringtone.mp3" preload="auto" loop></audio>
@@ -106,16 +158,18 @@
 
   <script>
     let number = '';
+    let ua = null;
+    let session = null;
+    let isCalling = false;
+
     const numberDisplay = document.getElementById('numberDisplay');
     const callButton = document.getElementById('callButton');
     const hangupButton = document.getElementById('hangupButton');
-    const answerButton = document.getElementById('answerButton');
-    const rejectButton = document.getElementById('rejectButton');
     const statusDisplay = document.getElementById('callStatus');
     const remoteAudio = document.getElementById('audioRemote');
     const ringtone = document.getElementById('ringtone');
-    let session = null;
-    let isCalling = false;
+    const incomingCallModal = document.getElementById('incomingCallModal');
+    const incomingCallText = document.getElementById('incomingCallText');
 
     function appendNumber(num) {
       number += num;
@@ -135,46 +189,67 @@
       ringtone.currentTime = 0;
     }
 
-    const socket = new JsSIP.WebSocketInterface('wss://xin.anjre.cn:8089/ws');
-    const configuration = {
-      sockets: [socket],
-      uri: 'sip:100110@xin.anjre.cn',
-      password: 'Aa6363463@',
-      display_name: '网页客户',
-      session_timers: false,
-      register: true
-    };
-    const ua = new JsSIP.UA(configuration);
-    ua.start();
+    function login() {
+      const sipUri = document.getElementById('sipUri').value;
+      const sipPassword = document.getElementById('sipPassword').value;
+      const wsServer = document.getElementById('wsServer').value;
 
-    ua.on('newRTCSession', function(data) {
-      const newSession = data.session;
-
-      if (newSession.direction === 'incoming') {
-        session = newSession;
-        const caller = session.remote_identity.uri.user;
-        updateStatus("来电中: " + caller);
-        playRingtone();
-        answerButton.style.display = 'inline-block';
-        rejectButton.style.display = 'inline-block';
-
-        session.on('ended', () => {
-          updateStatus("通话结束");
-          resetUI();
-        });
-        session.on('failed', (e) => {
-          updateStatus("呼叫失败");
-          console.error('呼叫失败:', e);
-          resetUI();
-        });
-        session.on('accepted', () => {
-          updateStatus("通话中");
-        });
+      if (!sipUri || !sipPassword || !wsServer) {
+        alert('请填写所有登录信息');
+        return;
       }
-    });
 
-    window.makeCall = function () {
-      if (isCalling || number === '') return;
+      const socket = new JsSIP.WebSocketInterface(wsServer);
+      const configuration = {
+        sockets: [socket],
+        uri: sipUri,
+        password: sipPassword,
+        display_name: '网页客户',
+        session_timers: false,
+        register: true
+      };
+
+      ua = new JsSIP.UA(configuration);
+      ua.start();
+
+      ua.on('registered', () => {
+        updateStatus('已注册');
+        document.getElementById('loginForm').style.display = 'none';
+      });
+
+      ua.on('registrationFailed', (e) => {
+        updateStatus('注册失败');
+        console.error('注册失败:', e);
+      });
+
+      ua.on('newRTCSession', function(data) {
+        const newSession = data.session;
+
+        if (newSession.direction === 'incoming') {
+          session = newSession;
+          const caller = session.remote_identity.uri.user;
+          incomingCallText.textContent = "来电中: " + caller;
+          incomingCallModal.style.display = 'flex';
+          playRingtone();
+
+          session.on('ended', () => {
+            updateStatus("通话结束");
+            resetUI();
+          });
+          session.on('failed', (e) => {
+            updateStatus("呼叫失败");
+            console.error('呼叫失败:', e);
+            resetUI();
+          });
+          session.on('accepted', () => {
+            updateStatus("通话中");
+          });
+        }
+      });
+    }
+
+    function makeCall() {
+      if (isCalling || number === '' || !ua) return;
 
       isCalling = true;
       callButton.disabled = true;
@@ -191,62 +266,6 @@
 
       session.connection.addEventListener('addstream', function (e) {
         remoteAudio.srcObject = e.stream;
-        remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
-      });
-
-      session.on('progress', () => updateStatus("振铃中..."));
-      session.on('accepted', () => updateStatus("通话中"));
-      session.on('ended', () => {
-        updateStatus("通话结束");
-        resetUI();
-      });
-      session.on('failed', (e) => {
-        updateStatus("呼叫失败");
-        console.error('呼叫失败:', e);
-        resetUI();
-      });
-    };
-
-    window.hangupCall = function () {
-      if (session) {
-        session.terminate();
-      }
-    };
-
-    window.answerCall = function () {
-      if (session) {
-        stopRingtone();
-        session.answer({
-          mediaConstraints: { audio: true, video: false }
-        });
-        session.connection.addEventListener('addstream', function (e) {
-          remoteAudio.srcObject = e.stream;
-          remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
-        });
-        answerButton.style.display = 'none';
-        rejectButton.style.display = 'none';
-        hangupButton.disabled = false;
-      }
-    };
-
-    window.rejectCall = function () {
-      if (session) {
-        stopRingtone();
-        session.terminate();
-        resetUI();
-      }
-    };
-
-    function resetUI() {
-      isCalling = false;
-      callButton.disabled = false;
-      hangupButton.disabled = true;
-      answerButton.style.display = 'none';
-      rejectButton.style.display = 'none';
-      session = null;
-      number = '';
-      numberDisplay.textContent = '请输入号码';
-    }
-  </script>
-</body>
-</html>
+        remote
+::contentReference[oaicite:17]{index=17}
+ 
