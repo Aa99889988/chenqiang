@@ -11,9 +11,13 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       height: 100vh;
       margin: 0;
+      padding-top: 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
     }
     #numberDisplay {
       font-size: 24px;
@@ -30,6 +34,7 @@
       grid-template-columns: repeat(3, 80px);
       grid-gap: 10px;
       margin-bottom: 20px;
+      display: none; /* 初始隐藏拨号盘 */
     }
     .dial-button {
       width: 80px;
@@ -41,7 +46,7 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.3);
       cursor: pointer;
     }
-    #callButton, #hangupButton, #answerButton, #rejectButton {
+    #callButton, #hangupButton, #answerButton, #rejectButton, #toggleDialerButton {
       padding: 14px 28px;
       font-size: 18px;
       margin: 10px;
@@ -66,6 +71,10 @@
       background-color: #6c757d;
       color: white;
     }
+    #toggleDialerButton {
+      background-color: #17a2b8;
+      color: white;
+    }
     #callStatus {
       font-size: 18px;
       margin-top: 10px;
@@ -75,7 +84,10 @@
 </head>
 <body>
 
+  <h1>📞 大头电话中心</h1>
+
   <div id="numberDisplay">请输入号码</div>
+  <button id="toggleDialerButton" onclick="toggleDialer()">打开拨号盘</button>
   <div id="dialer">
     <button class="dial-button" onclick="appendNumber('1')">1</button>
     <button class="dial-button" onclick="appendNumber('2')">2</button>
@@ -114,6 +126,8 @@
     const statusDisplay = document.getElementById('callStatus');
     const remoteAudio = document.getElementById('audioRemote');
     const ringtone = document.getElementById('ringtone');
+    const dialer = document.getElementById('dialer');
+    const toggleDialerButton = document.getElementById('toggleDialerButton');
     let session = null;
     let isCalling = false;
 
@@ -133,6 +147,16 @@
     function stopRingtone() {
       ringtone.pause();
       ringtone.currentTime = 0;
+    }
+
+    function toggleDialer() {
+      if (dialer.style.display === 'none') {
+        dialer.style.display = 'grid';
+        toggleDialerButton.textContent = '关闭拨号盘';
+      } else {
+        dialer.style.display = 'none';
+        toggleDialerButton.textContent = '打开拨号盘';
+      }
     }
 
     const socket = new JsSIP.WebSocketInterface('wss://xin.anjre.cn:8089/ws');
@@ -170,6 +194,15 @@
         session.on('accepted', () => {
           updateStatus("通话中");
         });
+
+        session.connection.addEventListener('track', function (e) {
+          if (e.track.kind === 'audio') {
+            const inboundStream = new MediaStream();
+            inboundStream.addTrack(e.track);
+            remoteAudio.srcObject = inboundStream;
+            remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
+          }
+        });
       }
     });
 
@@ -189,9 +222,13 @@
         }
       });
 
-      session.connection.addEventListener('addstream', function (e) {
-        remoteAudio.srcObject = e.stream;
-        remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
+      session.connection.addEventListener('track', function (e) {
+        if (e.track.kind === 'audio') {
+          const inboundStream = new MediaStream();
+          inboundStream.addTrack(e.track);
+          remoteAudio.srcObject = inboundStream;
+          remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
+        }
       });
 
       session.on('progress', () => updateStatus("振铃中..."));
@@ -219,34 +256,11 @@
         session.answer({
           mediaConstraints: { audio: true, video: false }
         });
-        session.connection.addEventListener('addstream', function (e) {
-          remoteAudio.srcObject = e.stream;
-          remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
-        });
-        answerButton.style.display = 'none';
-        rejectButton.style.display = 'none';
-        hangupButton.disabled = false;
-      }
-    };
-
-    window.rejectCall = function () {
-      if (session) {
-        stopRingtone();
-        session.terminate();
-        resetUI();
-      }
-    };
-
-    function resetUI() {
-      isCalling = false;
-      callButton.disabled = false;
-      hangupButton.disabled = true;
-      answerButton.style.display = 'none';
-      rejectButton.style.display = 'none';
-      session = null;
-      number = '';
-      numberDisplay.textContent = '请输入号码';
-    }
-  </script>
-</body>
-</html>
+        session.connection.addEventListener('track', function (e) {
+          if (e.track.kind === 'audio') {
+            const inboundStream = new MediaStream();
+            inboundStream.addTrack(e.track);
+            remoteAudio.srcObject = inboundStream;
+            remoteAudio.play().catch(err => console.warn('自动
+::contentReference[oaicite:21]{index=21}
+ 
