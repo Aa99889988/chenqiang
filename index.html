@@ -94,7 +94,7 @@
   <button id="callButton" onclick="makeCall()">📞 呼叫</button>
   <button id="hangupButton" onclick="hangupCall()" disabled>🛑 挂断</button>
   <button id="answerButton" onclick="answerCall()" style="display:none;">✅ 接听</button>
-  <button id="rejectButton" onclick="rejectCall()" style="display:none;">❌ 拒接</button>
+  <button id="rejectButton" onclick="rejectCall()" style="display:none;">❌ 拒绝</button>
   <div id="callStatus">未呼叫</div>
 
   <audio id="audioRemote" autoplay></audio>
@@ -124,17 +124,6 @@
       statusDisplay.textContent = text;
     }
 
-    function resetUI() {
-      isCalling = false;
-      callButton.disabled = false;
-      hangupButton.disabled = true;
-      answerButton.style.display = 'none';
-      rejectButton.style.display = 'none';
-      session = null;
-      number = '';
-      numberDisplay.textContent = '请输入号码';
-    }
-
     const socket = new JsSIP.WebSocketInterface('wss://xin.anjre.cn:8089/ws');
     const configuration = {
       sockets: [socket],
@@ -151,31 +140,38 @@
       const newSession = data.session;
 
       if (newSession.direction === 'incoming') {
-        const callerURI = newSession.remote_identity.uri.toString();
-        const callerDisplayName = newSession.remote_identity.display_name || callerURI;
-        updateStatus(`来电中：${callerDisplayName}`);
-
         session = newSession;
-        isCalling = true;
-        callButton.disabled = true;
-        hangupButton.disabled = true;
+        const caller = session.remote_identity.uri.user;
+        updateStatus(`来电：${caller}`);
+        numberDisplay.textContent = `来电：${caller}`;
         answerButton.style.display = 'inline-block';
         rejectButton.style.display = 'inline-block';
+        callButton.disabled = true;
+        hangupButton.disabled = false;
 
-        newSession.on('accepted', () => updateStatus("通话中"));
-        newSession.on('ended', () => {
+        session.on('peerconnection', function(e) {
+          const pc = e.peerconnection;
+          pc.addEventListener('track', function(event) {
+            if (event.track.kind === 'audio') {
+              if (event.streams.length > 0) {
+                remoteAudio.srcObject = event.streams[0];
+              } else {
+                const stream = new MediaStream([event.track]);
+                remoteAudio.srcObject = stream;
+              }
+            }
+          });
+        });
+
+        session.on('accepted', () => updateStatus("通话中"));
+        session.on('ended', () => {
           updateStatus("通话结束");
           resetUI();
         });
-        newSession.on('failed', (e) => {
+        session.on('failed', (e) => {
           updateStatus("呼叫失败");
           console.error('呼叫失败:', e);
           resetUI();
-        });
-
-        newSession.connection.addEventListener('addstream', function (e) {
-          remoteAudio.srcObject = e.stream;
-          remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
         });
       }
     });
@@ -196,9 +192,18 @@
         }
       });
 
-      session.connection.addEventListener('addstream', function (e) {
-        remoteAudio.srcObject = e.stream;
-        remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
+      session.on('peerconnection', function(e) {
+        const pc = e.peerconnection;
+        pc.addEventListener('track', function(event) {
+          if (event.track.kind === 'audio') {
+            if (event.streams.length > 0) {
+              remoteAudio.srcObject = event.streams[0];
+            } else {
+              const stream = new MediaStream([event.track]);
+              remoteAudio.srcObject = stream;
+            }
+          }
+        });
       });
 
       session.on('progress', () => updateStatus("振铃中..."));
@@ -214,29 +219,41 @@
       });
     };
 
-    window.hangupCall = function () {
-      if (session) {
-        session.terminate();
-      }
-    };
-
     window.answerCall = function () {
       if (session) {
         session.answer({
           mediaConstraints: { audio: true, video: false }
         });
+        updateStatus("通话中");
         answerButton.style.display = 'none';
         rejectButton.style.display = 'none';
-        hangupButton.disabled = false;
       }
     };
 
     window.rejectCall = function () {
       if (session) {
         session.terminate();
+        updateStatus("已拒绝来电");
         resetUI();
       }
     };
+
+    window.hangupCall = function () {
+      if (session) {
+        session.terminate();
+      }
+    };
+
+    function resetUI() {
+      isCalling = false;
+      callButton.disabled = false;
+      hangupButton.disabled = true;
+      answerButton.style.display = 'none';
+      rejectButton.style.display = 'none';
+      session = null;
+      number = '';
+      numberDisplay.textContent = '请输入号码';
+    }
   </script>
 </body>
 </html>
