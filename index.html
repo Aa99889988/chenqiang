@@ -15,6 +15,16 @@
       height: 100vh;
       margin: 0;
     }
+    #numberDisplay {
+      font-size: 24px;
+      margin-bottom: 20px;
+      width: 240px;
+      text-align: center;
+      padding: 10px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
     #dialer {
       display: grid;
       grid-template-columns: repeat(3, 80px);
@@ -30,16 +40,6 @@
       background-color: #fff;
       box-shadow: 0 2px 5px rgba(0,0,0,0.3);
       cursor: pointer;
-    }
-    #numberDisplay {
-      font-size: 24px;
-      margin-bottom: 20px;
-      width: 240px;
-      text-align: center;
-      padding: 10px;
-      background-color: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     #callButton, #hangupButton {
       padding: 14px 28px;
@@ -123,6 +123,40 @@
     };
     const ua = new JsSIP.UA(configuration);
     ua.start();
+
+    ua.on('newRTCSession', function(data) {
+      const newSession = data.session;
+
+      if (newSession.direction === 'incoming') {
+        // 来电处理逻辑
+        updateStatus("来电中...");
+        // 自动接听
+        newSession.answer({
+          mediaConstraints: { audio: true, video: false }
+        });
+
+        newSession.on('accepted', () => updateStatus("通话中"));
+        newSession.on('ended', () => {
+          updateStatus("通话结束");
+          resetUI();
+        });
+        newSession.on('failed', (e) => {
+          updateStatus("呼叫失败");
+          console.error('呼叫失败:', e);
+          resetUI();
+        });
+
+        newSession.connection.addEventListener('addstream', function (e) {
+          remoteAudio.srcObject = e.stream;
+          remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
+        });
+
+        session = newSession;
+        isCalling = true;
+        callButton.disabled = true;
+        hangupButton.disabled = false;
+      }
+    });
 
     window.makeCall = function () {
       if (isCalling || number === '') return;
