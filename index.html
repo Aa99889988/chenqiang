@@ -44,6 +44,14 @@
       margin-top: 10px;
       color: #333;
     }
+    #note {
+      font-size: 16px;
+      color: #555;
+      margin-top: 20px;
+      max-width: 600px;
+      text-align: center;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
@@ -51,6 +59,12 @@
   <button id="callButton" onclick="makeCall()">📞 呼叫客服</button>
   <button id="hangupButton" onclick="hangupCall()" disabled>🛑 挂断</button>
   <div id="callStatus">未呼叫</div>
+
+  <div id="note">
+    免费测试版本，支持 50 个人同时点击。可以嵌入网站、页面按钮等，一切样式均可自定义更改。<br />
+    如有需求请联系作者：xhh36993，✈ @a636346
+  </div>
+
   <audio id="audioRemote" autoplay></audio>
 
   <!-- ✅ 引入 JsSIP 和适配库 -->
